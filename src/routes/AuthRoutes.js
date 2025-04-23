@@ -44,7 +44,7 @@ router.post('/login', async (req, res) => {
   const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, {
     expiresIn: '1h',
   });
-  res.json({ token });
+  res.json({ token,isAdmin: user.is_admin,id:user.id });
 });
 
 router.post('/logout', authenticateToken, async (req, res) => {
@@ -61,7 +61,7 @@ router.post('/logout', authenticateToken, async (req, res) => {
   });
 
   
-  
+
 router.get('/me', authenticateToken, async (req, res) => {
     const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [req.user.id]);
     const user = userResult.rows[0];

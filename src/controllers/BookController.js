@@ -2,19 +2,30 @@
 import { Book } from '../models/Book.js';
 
 export const getAllBooks = async (req, res) => {
-  try {
-    const { page, perPage, status, categoryId, sort } = req.query;
-    const books = await Book.all({
-      page: Number(page) || 1,
-      perPage: Number(perPage) || 10,
-      filter: { status, categoryId },
-      sort: sort || 'title',
-    });
-    res.json(books);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+    try {
+      const { page, perPage, status, categoryId, sort, search } = req.query;
+      
+      // Build the query filters based on provided query parameters
+      const filters = {
+        status,
+        categoryId,
+        ...(search && { title: { $regex: search, $options: 'i' } }), // Add search filter for title (case insensitive)
+      };
+  
+      // Update the query for the Book model (ensure your database query supports the search filter)
+      const books = await Book.all({
+        page: Number(page) || 1,
+        perPage: Number(perPage) || 10,
+        filter: filters,
+        sort: sort || 'title',
+      });
+  
+      res.json(books);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  };
+  
 
 export const getBookById = async (req, res) => {
   try {

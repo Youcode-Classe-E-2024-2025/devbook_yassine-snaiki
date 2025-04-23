@@ -10,10 +10,40 @@ export class Loan {
     this.return_date = data.return_date;
   }
 
-  static async all() {
-    const { rows } = await db.query('SELECT * FROM loans ORDER BY loan_date DESC');
-    return rows.map(row => new Loan(row));
-  }
+static async all() {
+  const { rows } = await db.query(`
+    SELECT 
+      loans.id,
+      loans.loan_date,
+      loans.due_date,
+      loans.return_date,
+      users.id AS user_id,
+      users.name AS user_name,
+      books.id AS book_id,
+      books.title AS book_title
+    FROM loans
+    JOIN users ON loans.user_id = users.id
+    JOIN books ON loans.book_id = books.id
+    ORDER BY loans.loan_date DESC
+  `);
+
+  return rows.map(row => ({
+    id: row.id,
+    loan_date: row.loan_date,
+    due_date: row.due_date,
+    return_date: row.return_date,
+    is_overdue: !row.return_date && new Date(row.due_date) < new Date() || row.return_date && new Date(row.due_date) < new Date(row.return_date),
+    user: {
+      id: row.user_id,
+      name: row.user_name,
+    },
+    book: {
+      id: row.book_id,
+      title: row.book_title,
+    },
+  }));
+}
+
 
   static async findById(id) {
     const { rows } = await db.query('SELECT * FROM loans WHERE id = $1', [id]);

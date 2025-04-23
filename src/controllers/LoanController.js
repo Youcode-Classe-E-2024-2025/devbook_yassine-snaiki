@@ -1,12 +1,13 @@
 // src/controllers/LoanController.js
 import {db as pool} from '../config/db.js';
+import { Loan } from '../models/Loan.js';
 
 const LoanController = {
   // Get all loans
   async getAllLoans(req, res) {
     try {
-      const result = await pool.query('SELECT * FROM loans');
-      res.json(result.rows);
+      const result = await Loan.all();
+      res.json(result);
     } catch (error) {
       console.error('Error fetching loans:', error);
       res.status(500).send('Internal Server Error');
