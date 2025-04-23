@@ -1,0 +1,342 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Books | DevBook</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <nav class="bg-white shadow p-4 flex justify-between items-center">
+    <span class="font-bold text-xl">DevBook</span>
+    <div class="space-x-4">
+      <a href="index.html" class="hover:underline">Home</a>
+      <button id="logoutBtn" class="text-red-500 hover:underline">Logout</button>
+    </div>
+  </nav>
+  <main class="p-8">
+    <div class="flex justify-between items-center mb-4">
+      <h1 class="text-2xl font-semibold">Books</h1>
+      <button id="addBookBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Add Book</button>
+    </div>
+    <div class="mb-4 space-x-2">
+      <select id="statusFilter" class="border p-2 rounded">
+        <option value="">All Status</option>
+        <option value="available">Available</option>
+        <option value="borrowed">Borrowed</option>
+      </select>
+      <select id="categoryFilter" class="border p-2 rounded"></select>
+      <select id="sortSelect" class="border p-2 rounded">
+        <option value="title">Title</option>
+        <option value="author">Author</option>
+      </select>
+      <input type="text" id="searchInput" placeholder="Search..." class="border p-2 rounded" />
+    </div>
+    <div class="overflow-auto">
+      <table class="min-w-full bg-white rounded-lg overflow-hidden">
+        <thead class="bg-gray-200">
+          <tr>
+            <th class="px-4 py-2">Title</th>
+            <th class="px-4 py-2">Author</th>
+            <th class="px-4 py-2">Category</th>
+            <th class="px-4 py-2">Status</th>
+            <th class="px-4 py-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="booksTableBody"></tbody>
+      </table>
+    </div>
+    <div class="mt-4 flex justify-center space-x-2" id="pagination"></div>
+
+    <!-- Category Management -->
+    <div class="mt-12">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold">Categories</h2>
+        <button id="addCategoryBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg">Add Category</button>
+      </div>
+      <table class="min-w-full bg-white rounded-lg overflow-hidden">
+        <thead class="bg-gray-200">
+          <tr>
+            <th class="px-4 py-2">Name</th>
+            <th class="px-4 py-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="categoriesTableBody"></tbody>
+      </table>
+    </div>
+    <div class="mt-12">
+        <h2 class="text-xl font-semibold mb-4">Loaned Books</h2>
+        <table class="min-w-full bg-white rounded-lg overflow-hidden">
+          <thead class="bg-gray-200">
+            <tr>
+              <th class="px-4 py-2">Book</th>
+              <th class="px-4 py-2">User</th>
+              <th class="px-4 py-2">Due Date</th>
+              <th class="px-4 py-2">Status</th>
+            </tr>
+          </thead>
+          <tbody id="loansTableBody"></tbody>
+        </table>
+      </div>
+  </main>
+
+  <!-- Book Modal -->
+  <div id="bookModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg w-full max-w-md">
+      <h2 id="modalTitle" class="text-xl font-bold mb-4">Add Book</h2>
+      <form id="bookForm">
+        <input type="hidden" id="bookId" />
+        <div class="mb-4">
+          <label class="block font-medium">Title</label>
+          <input type="text" id="bookTitle" class="border p-2 rounded w-full" required />
+        </div>
+        <div class="mb-4">
+          <label class="block font-medium">Author</label>
+          <input type="text" id="bookAuthor" class="border p-2 rounded w-full" required />
+        </div>
+        <div class="mb-4">
+          <label class="block font-medium">Category</label>
+          <select id="bookCategory" class="border p-2 rounded w-full" required></select>
+        </div>
+        <div class="mb-4">
+          <label class="block font-medium">Status</label>
+          <select id="bookStatus" class="border p-2 rounded w-full" required>
+            <option value="available">Available</option>
+            <option value="borrowed">Borrowed</option>
+          </select>
+        </div>
+        <div class="flex justify-end space-x-2">
+          <button type="button" id="cancelBtn" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Category Modal -->
+  <div id="categoryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg w-full max-w-md">
+      <h2 id="categoryModalTitle" class="text-xl font-bold mb-4">Add Category</h2>
+      <form id="categoryForm">
+        <input type="hidden" id="categoryId" />
+        <div class="mb-4">
+          <label class="block font-medium">Name</label>
+          <input type="text" id="categoryName" class="border p-2 rounded w-full" required />
+        </div>
+        <div class="flex justify-end space-x-2">
+          <button type="button" id="cancelCategoryBtn" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+
+  <script src="auth.js"></script>
+  <script>
+    if (!localStorage.getItem('token')) window.location.href = '/public/login.html';
+    (function() {
+      const token = localStorage.getItem('token');
+      if (!token) location.href = 'login.html';
+      const headers = { 'Content-Type':'application/json', 'Authorization': `Bearer ${token}` };
+      const api = 'http://localhost:4000/api/books';
+      const categoryApi = 'http://localhost:4000/api/categories';
+      let currentPage = 1, perPage = 10;
+
+      const bookModal = document.getElementById('bookModal');
+      const bookForm = document.getElementById('bookForm');
+      const bookCategorySelect = document.getElementById('bookCategory');
+      const categoryModal = document.getElementById('categoryModal');
+      const categoryForm = document.getElementById('categoryForm');
+
+      function openModal(book = null) {
+        bookModal.classList.remove('hidden');
+        document.getElementById('modalTitle').textContent = book ? 'Edit Book' : 'Add Book';
+        document.getElementById('bookId').value = book ? book.id : '';
+        document.getElementById('bookTitle').value = book ? book.title : '';
+        document.getElementById('bookAuthor').value = book ? book.author : '';
+        document.getElementById('bookStatus').value = book ? book.status : 'available';
+        bookCategorySelect.innerHTML = '';
+        fetch(categoryApi, { headers })
+          .then(res => res.json())
+          .then(cats => {
+            cats.forEach(c => {
+              const option = document.createElement('option');
+              option.value = c.id;
+              option.textContent = c.name;
+              if (book && book.categoryId === c.id) option.selected = true;
+              
+              bookCategorySelect.appendChild(option);
+            });
+          });
+      }
+
+      function closeModal() {
+        bookModal.classList.add('hidden');
+      }
+
+      function openCategoryModal(cat = null) {
+        categoryModal.classList.remove('hidden');
+        document.getElementById('categoryModalTitle').textContent = cat ? 'Edit Category' : 'Add Category';
+        document.getElementById('categoryId').value = cat ? cat.id : '';
+        document.getElementById('categoryName').value = cat ? cat.name : '';
+      }
+
+      function closeCategoryModal() {
+        categoryModal.classList.add('hidden');
+      }
+
+      function loadBooks() {
+        const status = document.getElementById('statusFilter').value;
+        const cat = document.getElementById('categoryFilter').value;
+        const sort = document.getElementById('sortSelect').value;
+        const search = document.getElementById('searchInput').value;
+        const qs = `?page=${currentPage}&perPage=${perPage}&status=${status}&categoryId=${cat}&sort=${sort}&search=${search}`;
+        fetch(api + qs, { headers })
+          .then(r => r.json())
+          .then(data => {
+            const tbody = document.getElementById('booksTableBody');
+            tbody.innerHTML = '';
+            data.forEach(b => {
+              tbody.innerHTML += `
+                <tr>
+                  <td class="px-4 py-2">${b.title}</td>
+                  <td class="px-4 py-2">${b.author}</td>
+                  <td class="px-4 py-2">${b.categoryName || 'others'}</td>
+                  <td class="px-4 py-2">${b.status}</td>
+                  <td class="px-4 py-2 space-x-2">
+                    <button onclick="editBook(${b.id})" class="text-blue-600">Edit</button>
+                    <button onclick="deleteBook(${b.id})" class="text-red-600">Delete</button>
+                  </td>
+                </tr>
+              `;
+            });
+          });
+      }
+
+      function loadCategories() {
+        fetch(categoryApi, { headers })
+          .then(res => res.json())
+          .then(cats => {
+            const filterSel = document.getElementById('categoryFilter');
+            filterSel.innerHTML = '<option value="">All Categories</option>';
+            cats.forEach(c => filterSel.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+
+            const categoryTable = document.getElementById('categoriesTableBody');
+            categoryTable.innerHTML = '';
+            cats.forEach(cat => {
+              categoryTable.innerHTML += `
+                <tr>
+                  <td class="px-4 py-2">${cat.name}</td>
+                  <td class="px-4 py-2 space-x-2">
+                    <button onclick="editCategory(${cat.id})" class="text-blue-600">Edit</button>
+                    <button onclick="deleteCategory(${cat.id})" class="text-red-600">Delete</button>
+                  </td>
+                </tr>
+              `;
+            });
+          });
+      }
+
+      document.getElementById('addBookBtn').onclick = () => openModal();
+      document.getElementById('cancelBtn').onclick = () => closeModal();
+      document.getElementById('addCategoryBtn').onclick = () => openCategoryModal();
+      document.getElementById('cancelCategoryBtn').onclick = () => closeCategoryModal();
+
+      bookForm.onsubmit = function(e) {
+        e.preventDefault();
+        const id = document.getElementById('bookId').value;
+        const payload = {
+          title: document.getElementById('bookTitle').value,
+          author: document.getElementById('bookAuthor').value,
+          category_id: document.getElementById('bookCategory').value,
+          status: document.getElementById('bookStatus').value
+        };
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `${api}/${id}` : api;
+        fetch(url, {
+          method,
+          headers,
+          body: JSON.stringify(payload)
+        }).then(() => {
+          closeModal();
+          loadBooks();
+        });
+      };
+
+      categoryForm.onsubmit = function(e) {
+        e.preventDefault();
+        const id = document.getElementById('categoryId').value;
+        const payload = { name: document.getElementById('categoryName').value };
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `${categoryApi}/${id}` : categoryApi;
+        fetch(url, {
+          method,
+          headers,
+          body: JSON.stringify(payload)
+        }).then(() => {
+          closeCategoryModal();
+          loadCategories();
+          loadBooks();
+        });
+      };
+
+      window.editBook = function(id) {
+        fetch(`${api}/${id}`, { headers })
+          .then(res => res.json())
+          .then(book => openModal(book));
+      };
+
+      window.deleteBook = function(id) {
+        fetch(`${api}/${id}`, { method: 'DELETE', headers }).then(loadBooks);
+      };
+
+      window.editCategory = function(id) {
+        fetch(`${categoryApi}/${id}`, { headers })
+          .then(res => res.json())
+          .then(cat => openCategoryModal(cat));
+      };
+
+      window.deleteCategory = function(id) {
+        fetch(`${categoryApi}/${id}`, { method: 'DELETE', headers }).then(() => {
+          loadCategories();
+          loadBooks();
+        });
+      };
+
+      ['statusFilter','categoryFilter','sortSelect'].forEach(id => document.getElementById(id).addEventListener('change', loadBooks));
+      document.getElementById('searchInput').addEventListener('input', loadBooks);
+
+      loadCategories();
+      loadBooks();
+    })();
+    function loadLoans() {
+        const loansApi = 'http://localhost:4000/api/loans';
+        const token = localStorage.getItem('token');
+      if (!token) location.href = 'login.html';
+        const headers = { 'Content-Type':'application/json', 'Authorization': `Bearer ${token}` };
+        fetch(loansApi, { headers })
+          .then(res => res.json())
+          .then(loans => {
+            console.log(loans);
+            const tbody = document.getElementById('loansTableBody');
+            tbody.innerHTML = '';
+            loans.forEach(loan => {
+              const due = new Date(loan.due_date);
+              const now = new Date();
+              const status = (loan.is_overdue) ? '❌ Overdue' : (!!loan.return_date ?  '✅ On time' : '⏳ Pending');
+              const row = `
+                <tr>
+                  <td class="px-4 py-2">${loan.book?.title || 'Unknown'}</td>
+                  <td class="px-4 py-2">${loan.user?.name || loan.user?.email || 'N/A'}</td>
+                  <td class="px-4 py-2">${due.toLocaleDateString()}</td>
+                  <td class="px-4 py-2">${status}</td>
+                </tr>
+              `;
+              tbody.innerHTML += row;
+            });
+          });
+      }
+      loadLoans();
+      
+  </script>
+</body>
+</html>
